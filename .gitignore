@@ -1,0 +1,16 @@
+# Secrets and local configuration — keep these out of GitHub.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and generated files
+**/node_modules/
+**/.expo/
+**/dist/
+**/web-build/
+*.log
+.DS_Store
+*.zip
+*.pages
+mobile/
+railway.json
