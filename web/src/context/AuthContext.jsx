@@ -1,39 +1,27 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, TOKEN_KEY, User } from '../api/client';
+import api from '../api/axios';
 
-type AuthContext = {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  register: (b: {
-    email: string;
-    password: string;
-    full_name: string;
-    role: string;
-    diagnosis?: string;
-    discharge_date?: string;
-  }) => Promise<User>;
-  logout: () => Promise<void>;
-  refresh: () => Promise<void>;
-};
+const AuthContext = createContext(null);
 
-const Ctx = createContext<AuthCtx | null>(null);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const bootstrap = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = localStorage.getItem('meditrack-token');
       if (token) {
-        const me = await api.me();
-        setUser(me);
+        window.__accessToken = token;
+        const { data } = await api.get('/auth/me');
+        setUser(data.user);
+        setIsAuthenticated(true);
       }
     } catch {
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('meditrack-token');
+      window.__accessToken = null;
       setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
@@ -43,41 +31,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     bootstrap();
   }, [bootstrap]);
 
-  const login = async (email: string, password: string) => {
-    const res = await api.login(email, password);
-    await AsyncStorage.setItem(TOKEN_KEY, res.token);
-    setUser(res.user);
-    return res.user;
-  };
-
-  const register: AuthCtx['register'] = async (body) => {
-    const res = await api.register(body);
-    await AsyncStorage.setItem(TOKEN_KEY, res.token);
-    setUser(res.user);
-    return res.user;
+  const login = async (email, password, joinCode) => {
+    const { data } = await api.post('/auth/login', { email, password, joinCode });
+    localStorage.setItem('meditrack-token', data.accessToken);
+    window.__accessToken = data.accessToken;
+    setUser(data.user);
+    setIsAuthenticated(true);
+    return data.user;
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    try {
+      await api.post('/auth/logout');
+    } catch {}
+    localStorage.removeItem('meditrack-token');
+    window.__accessToken = null;
     setUser(null);
+    setIsAuthenticated(false);
   };
 
   const refresh = async () => {
     try {
-      const me = await api.me();
-      setUser(me);
-    } catch {}
+      const { data } = await api.post('/auth/refresh', {});
+      localStorage.setItem('meditrack-token', data.accessToken);
+      window.__accessToken = data.accessToken;
+    } catch {
+      localStorage.removeItem('meditrack-token');
+      window.__accessToken = null;
+      setUser(null);
+      setIsAuthenticated(false);
+    }
   };
 
   return (
-    <Ctx.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated, login, logout, refresh }}>
       {children}
-    </Ctx.Provider>
+    </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const v = useContext(Ctx);
-  if (!v) throw new Error('useAuth outside provider');
-  return v;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
 }

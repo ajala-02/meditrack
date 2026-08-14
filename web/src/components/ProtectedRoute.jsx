@@ -5,6 +5,7 @@ const ROLE_ROUTES = {
   admin: "/admin",
   doctor: "/dashboard",
   nurse: "/dashboard",
+  patient: "/patient/home",
 };
 
 /**

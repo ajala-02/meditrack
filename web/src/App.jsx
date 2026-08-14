@@ -7,6 +7,7 @@ import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import PatientDetail from "./pages/patients/PatientDetail";
 import EnrollPatient from "./pages/patients/EnrollPatient";
+import PatientHome from "./pages/patients/PatientHome";
 import AdminPanel from "./pages/admin/AdminPanel";
 import "./index.css";
 
@@ -14,6 +15,7 @@ const ROLE_ROUTES = {
   admin: "/admin",
   doctor: "/dashboard",
   nurse: "/dashboard",
+  patient: "/patient/home",
 };
 
 /**
@@ -43,6 +45,16 @@ const App = () => {
 
             {/* Root redirect */}
             <Route path="/" element={<RootRedirect />} />
+
+            {/* Authenticated patient route */}
+            <Route
+              path="/patient/home"
+              element={
+                <ProtectedRoute allowedRoles={["patient"]}>
+                  <PatientHome />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Authenticated layout with sidebar */}
             <Route

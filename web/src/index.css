@@ -35,25 +35,27 @@
   --shadow-glow-danger: 0 0 20px rgba(239, 68, 68, 0.3);
 }
 
-/* ─── Global Reset ────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ─── Global Reset (wrapped in @layer base so Tailwind utilities win) ─── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-html {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  min-height: 100vh;
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+  }
 }
 
 /* ─── Scrollbar ───────────────────────────────────────── */

@@ -2,271 +2,63 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-const ROLE_ROUTES = {
-  admin: "/admin",
-  doctor: "/dashboard",
-  nurse: "/dashboard",
-};
-
 const Login = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError("");
-    setIsLoading(true);
+    if (!email.trim() || !recoveryCode.trim()) {
+      setError("Enter your email address and recovery code to continue.");
+      return;
+    }
 
+    setIsLoading(true);
     try {
-      const user = await login(email, password);
-      const redirectPath = ROLE_ROUTES[user.role] || "/dashboard";
-      navigate(redirectPath, { replace: true });
+      const user = await login(email.trim().toLowerCase(), undefined, recoveryCode.trim());
+      navigate(user.role === "patient" ? "/patient/home" : "/dashboard", { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+      setError(err.response?.data?.message || "We could not sign you in. Please check your details and try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#0a0f1e] text-slate-100 overflow-x-hidden relative grid-pattern select-none">
-      {/* Custom Styles Injection */}
-      <style>{`
-        @keyframes blob {
-          0%, 100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-        }
-        @keyframes ecg {
-          to {
-            stroke-dashoffset: -1000;
-          }
-        }
-        @keyframes heart-pulse {
-          0%, 100% {
-            transform: scale(1);
-            filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.4));
-          }
-          50% {
-            transform: scale(1.1);
-            filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.8));
-          }
-        }
-        .animate-blob {
-          animation: blob 10s infinite ease-in-out;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animate-ecg {
-          stroke-dasharray: 1000;
-          stroke-dashoffset: 1000;
-          animation: ecg 8s linear infinite;
-        }
-        .animate-heart {
-          animation: heart-pulse 2s infinite ease-in-out;
-          transform-origin: center;
-        }
-        .grid-pattern {
-          background-size: 40px 40px;
-          background-image: 
-            linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        }
-      `}</style>
-
-      {/* Animated Gradient Blobs */}
-      <div className="absolute top-10 left-10 w-[350px] h-[350px] rounded-full bg-[#06b6d4] opacity-[0.15] blur-[120px] animate-blob pointer-events-none" />
-      <div className="absolute bottom-20 right-10 w-[400px] h-[400px] rounded-full bg-[#3b82f6] opacity-[0.15] blur-[130px] animate-blob animation-delay-2000 pointer-events-none" />
-
-      {/* Left panel (60%) */}
-      <div className="w-full lg:w-[60%] flex flex-col justify-center gap-6 p-8 lg:p-20 relative z-10 lg:min-h-screen">
-        {/* Top: Logo, ECG & Tagline section */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#06b6d4] to-[#3b82f6] shadow-[0_0_20px_rgba(6,182,212,0.4)]">
-              {/* Heart icon */}
-              <svg className="w-6 h-6 text-white animate-heart" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white">
-              Medi<span className="text-[#06b6d4]">Track</span>
-            </h1>
+    <main className="min-h-screen bg-white">
+      {/* <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1240px] overflow-hidden rounded-[32px] border border-[#dce7e1] bg-white shadow-[0_24px_70px_rgba(31,84,73,0.10)] lg:min-h-[720px] lg:grid-cols-[1.08fr_0.92fr]"> */}
+      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
+        <section className="relative overflow-hidden bg-[#1f6b62] px-7 py-8 text-white sm:px-11 sm:py-12 lg:flex lg:flex-col lg:justify-between lg:px-14 lg:py-14">
+          <div className="pointer-events-none absolute -right-24 -top-20 h-72 w-72 rounded-full border-[42px] border-white/10" />
+          <div className="pointer-events-none absolute -bottom-28 left-20 h-72 w-72 rounded-full bg-[#e9ad7e]/10 blur-2xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#1f6b62] shadow-lg shadow-black/10"><svg className="h-6 w-6 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg></div><span className="text-2xl font-extrabold tracking-tight">MediTrack</span></div>
+            <div className="mt-16 max-w-[520px] lg:mt-24"><div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.14em] text-[#f5c49d]"><span className="h-1.5 w-1.5 rounded-full bg-[#f5c49d]" /> POST-DISCHARGE CARE</div><h1 className="mt-6 text-4xl font-extrabold leading-[1.08] tracking-[-0.045em] sm:text-5xl lg:text-[58px]">Recovery feels better with someone beside you.</h1><p className="mt-6 max-w-md text-base leading-7 text-[#d7ebe3] sm:text-lg">A reassuring place to check in, follow your recovery plan, and stay connected to your care team after discharge.</p></div>
           </div>
+          <div className="relative mt-12 grid gap-3 sm:grid-cols-3 lg:mt-16 lg:grid-cols-1">
+            {[["✓", "2-minute check-ins", "A small update keeps your team informed."], ["⌁", "Care that notices", "Symptoms are reviewed with your recovery plan."], ["↗", "Support when needed", "Your care team is only a message away."]].map(([icon, title, detail]) => <div key={title} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur-sm"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold">{icon}</div><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-[#c9e0d8]">{detail}</p></div></div>)}
+          </div>
+        </section>
 
-          {/* Heartbeat/ECG line */}
-          <div className="mt-1 opacity-80">
-            <svg viewBox="0 0 400 60" className="w-full max-w-sm h-12 text-teal-400">
-              <path
-                d="M 10 30 L 100 30 L 110 15 L 120 45 L 130 30 L 170 30 L 175 20 L 180 40 L 185 30 L 230 30 L 240 5 L 250 55 L 260 30 L 310 30 L 320 20 L 330 40 L 340 30 L 390 30"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="animate-ecg"
-              />
-            </svg>
+        <section className="flex items-center justify-center bg-[#fdfdfb] px-6 py-10 sm:px-12 lg:px-14">
+          <div className="w-full max-w-[420px]">
+            <p className="text-xs font-extrabold tracking-[0.12em] text-[#b26c4b]">PATIENT PORTAL</p><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.035em] text-[#183f38]">Welcome back</h2><p className="mt-2 text-sm leading-6 text-[#6f827d]">Sign in to view today’s recovery plan and share how you are feeling.</p>
+            {error && <div role="alert" className="mt-7 flex items-start gap-3 rounded-xl border border-[#f1cbc3] bg-[#fff3f1] p-3.5 text-sm text-[#9a493e]"><span className="font-bold">!</span>{error}</div>}
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              <label className="block"><span className="mb-2 block text-xs font-extrabold tracking-[0.08em] text-[#385a53]">EMAIL ADDRESS</span><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#78908a]">✉</span><input id="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="h-14 w-full rounded-xl border border-[#d8e3de] bg-white pl-11 pr-4 text-[15px] text-[#244740] outline-none transition placeholder:text-[#9ba9a5] focus:border-[#2f8c7d] focus:ring-4 focus:ring-[#2f8c7d]/10" /></div></label>
+              <label className="block"><span className="mb-2 flex items-center justify-between text-xs font-extrabold tracking-[0.08em] text-[#385a53]">RECOVERY CODE <span className="normal-case font-medium tracking-normal text-[#84948f]">Shared by your hospital</span></span><div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#78908a]">⌘</span><input id="recovery-code" type="text" autoComplete="one-time-code" value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="Enter your 6-digit code" maxLength={6} className="h-14 w-full rounded-xl border border-[#d8e3de] bg-white pl-11 pr-4 text-[15px] font-bold tracking-[0.14em] text-[#244740] outline-none transition placeholder:font-normal placeholder:tracking-normal placeholder:text-[#9ba9a5] focus:border-[#2f8c7d] focus:ring-4 focus:ring-[#2f8c7d]/10" /></div></label>
+              <button type="submit" disabled={isLoading} className="mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#1f6b62] text-[15px] font-extrabold text-white shadow-lg shadow-[#1f6b62]/20 transition hover:bg-[#18564e] disabled:cursor-not-allowed disabled:opacity-60">{isLoading ? "Signing you in…" : <>Continue to my recovery <span aria-hidden="true">→</span></>}</button>
+            </form>
+            <div className="mt-7 flex items-center justify-center gap-2 text-center text-xs text-[#71837e]">🔒 Your recovery information is securely protected.</div><p className="mt-5 text-center text-sm text-[#71837e]">Need your recovery code? <a href="mailto:support@meditrack.com" className="font-bold text-[#1f6b62] underline underline-offset-2">Contact your hospital</a></p>
           </div>
-
-          {/* Tagline */}
-          <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight mt-1 bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            Intelligent Recovery. <br />
-            <span className="bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] bg-clip-text text-transparent">Real-time Care.</span>
-          </h2>
-        </div>
-
-        {/* Feature Highlights */}
-        <div className="flex flex-col gap-4 max-w-lg mt-2">
-          {/* Highlight 1 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border-l-4 border-[#06b6d4] bg-slate-900/40 backdrop-blur-md border border-slate-800/30 hover:border-slate-700/50 transition-all duration-300">
-            <div className="text-2xl filter drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]">🩺</div>
-            <div>
-              <p className="text-base font-bold text-white leading-tight">Condition-Specific Monitoring</p>
-              <p className="text-xs text-slate-400 mt-1 font-medium">Cardiac, Ortho, Diabetes & more</p>
-            </div>
-          </div>
-          {/* Highlight 2 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border-l-4 border-[#06b6d4] bg-slate-900/40 backdrop-blur-md border border-slate-800/30 hover:border-slate-700/50 transition-all duration-300">
-            <div className="text-2xl filter drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]">🧠</div>
-            <div>
-              <p className="text-base font-bold text-white leading-tight">AI-Assisted Triage</p>
-              <p className="text-xs text-slate-400 mt-1 font-medium">AI analyzes symptoms instantly</p>
-            </div>
-          </div>
-          {/* Highlight 3 */}
-          <div className="flex items-center gap-4 p-4 rounded-xl border-l-4 border-[#06b6d4] bg-slate-900/40 backdrop-blur-md border border-slate-800/30 hover:border-slate-700/50 transition-all duration-300">
-            <div className="text-2xl filter drop-shadow-[0_0_8px_rgba(6,182,212,0.3)]">🚨</div>
-            <div>
-              <p className="text-base font-bold text-white leading-tight">Real-time Alerts</p>
-              <p className="text-xs text-slate-400 mt-1 font-medium">Nurses & doctors notified by severity</p>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
-
-      {/* Right panel (45% on lg, 40% on xl) */}
-      <div className="w-full lg:w-[45%] xl:w-[40%] flex flex-col justify-center items-center p-6 sm:p-10 md:p-12 lg:p-16 relative z-10 lg:min-h-screen">
-        <div className="w-full max-w-lg p-8 sm:p-10 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-[20px] shadow-2xl relative overflow-hidden mx-auto">
-          {/* Subtle shine overlay */}
-          <div className="absolute -top-[10%] -left-[10%] w-[120%] h-[120%] bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-2xl" />
-
-          {/* Heading */}
-          <div className="relative mb-8">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Welcome Back</h2>
-          </div>
-
-          {/* Error alert */}
-          {error && (
-            <div className="mb-6 p-4 rounded-xl text-sm border animate-fade-in bg-rose-500/10 border-rose-500/20 text-rose-300">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6 relative">
-            {/* Email */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="email" className="block text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="doctor@hospital.com"
-                  className="w-full px-4 py-4 rounded-xl text-base text-white placeholder-slate-500 bg-slate-950/60 border border-slate-800/80 outline-none transition-all duration-300 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 shadow-inner"
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="password" className="block text-xs sm:text-sm font-semibold text-slate-300 uppercase tracking-wider">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full pl-4 pr-12 py-4 rounded-xl text-base text-white placeholder-slate-500 bg-slate-950/60 border border-slate-800/80 outline-none transition-all duration-300 focus:border-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]/30 shadow-inner"
-                />
-                {/* Show/Hide Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none flex items-center p-1"
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 5.656m0 0l-8.228 8.228m8.228-8.228a4 4 0 015.656-5.656m0 0l8.228 8.228M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button with top margin offset for clear separation */}
-            <div className="pt-2">
-              <button
-                id="login-submit"
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-4 rounded-xl text-base font-bold text-white transition-all duration-300 relative overflow-hidden group/btn bg-gradient-to-r from-[#06b6d4] to-[#3b82f6] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <span className="inline-flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Signing in…
-                  </span>
-                ) : (
-                  <span>Sign In</span>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Footer info */}
-          <p className="text-center text-xs text-slate-500 mt-8 font-medium">
-            MediTrack Clinical Platform • Secure Access
-          </p>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 };
 
