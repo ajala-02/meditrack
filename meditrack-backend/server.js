@@ -16,6 +16,7 @@ const checkInRoutes = require("./src/routes/checkInRoutes");
 const conditionRoutes = require("./src/routes/conditionRoutes");
 const dashboardRoutes = require("./src/routes/dashboardRoutes");
 const reportRoutes = require("./src/routes/reportRoutes");
+const messageRoutes = require("./src/routes/messageRoutes");
 
 // Initialize Express
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api/checkins", checkInRoutes);
 app.use("/api/conditions", conditionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/messages", messageRoutes);
 
 // ── Socket.io ───────────────────────────────────────────
 const { initializeSocket } = require("./src/socket/socketHandler");

@@ -3,7 +3,7 @@ const Patient = require("../models/Patient");
 const Alert = require("../models/Alert");
 const User = require("../models/User");
 const { calculateTriageScore, riskToAlertSeverity } = require("../utils/scoring");
-const { analyzeSymptomText, generateCheckInResponse } = require("../services/claudeService");
+const { analyzeSymptomText, generateCheckInResponse, extractVoiceCheckIn } = require("../services/claudeService");
 const { emitAlert, EVENTS, getPatientRoom } = require("../socket/socketHandler");
 
 // ─────────────────────────────────────────────────────────
@@ -380,9 +380,23 @@ const analyzeSymptom = async (req, res) => {
   }
 };
 
+const extractVoice = async (req, res) => {
+  try {
+    const { text, patientName, day, total } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ message: "Voice transcript is required." });
+    const patient = await Patient.findOne({ userId: req.user.id }).select("condition").lean();
+    if (!patient) return res.status(404).json({ message: "Patient record not found." });
+    const extracted = await extractVoiceCheckIn({ text: text.trim(), patientName, condition: patient.condition, day, total });
+    res.status(200).json({ extracted });
+  } catch (error) {
+    res.status(500).json({ message: "Voice check-in analysis failed.", error: error.message });
+  }
+};
+
 module.exports = {
   submitCheckIn,
   getPatientCheckIns,
   respondToCheckIn,
   analyzeSymptom,
+  extractVoice,
 };

@@ -11,6 +11,7 @@ import PatientHome from "./pages/patients/patienthome";
 import PatientCheckIn from "./pages/patients/PatientCheckIn";
 import RecoveryPlan from "./pages/patients/RecoveryPlan";
 import AdminPanel from "./pages/admin/AdminPanel";
+import AICompanion from "./pages/patients/AICompanion";
 import "./index.css";
 
 const ROLE_ROUTES = {
@@ -64,6 +65,10 @@ const App = () => {
             <Route
               path="/patient/plan"
               element={<ProtectedRoute allowedRoles={["patient"]}><RecoveryPlan /></ProtectedRoute>}
+            />
+            <Route
+              path="/patient/ai-companion"
+              element={<ProtectedRoute allowedRoles={["patient"]}><AICompanion /></ProtectedRoute>}
             />
 
             {/* Authenticated layout with sidebar */}

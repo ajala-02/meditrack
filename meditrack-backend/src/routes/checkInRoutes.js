@@ -6,6 +6,7 @@ const {
   getPatientCheckIns,
   respondToCheckIn,
   analyzeSymptom,
+  extractVoice,
 } = require("../controllers/checkInController");
 
 const { verifyToken, authorizeRoles } = require("../middleware/auth");
@@ -39,6 +40,12 @@ router.post(
   "/analyze-symptom",
   authorizeRoles("patient"),
   analyzeSymptom
+);
+
+router.post(
+  "/extract-voice",
+  authorizeRoles("patient"),
+  extractVoice
 );
 
 module.exports = router;

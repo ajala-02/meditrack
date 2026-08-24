@@ -23,6 +23,17 @@ const getGreeting = () => {
 const toTitleCase = (str = "") =>
   str.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
+const getStreak = (items) => {
+  const days = new Set(items.map((item) => new Date(item.date).toISOString().slice(0, 10)));
+  let streak = 0;
+  const cursor = new Date();
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+};
+
 // Builds a smooth SVG area-chart path from an array of values.
 // Pure presentation helper -- no external charting library needed.
 const buildAreaPath = (values, width, height, padding = 8) => {
@@ -51,6 +62,7 @@ const buildAreaPath = (values, width, height, padding = 8) => {
 
 const NAV_ITEMS = [
   { key: "checkin", label: "Check-In", icon: "📝", path: "/patient/check-in" },
+  { key: "companion", label: "AI Companion", icon: "🤖", path: "/patient/ai-companion" },
   { key: "messages", label: "Messages", icon: "💬", path: null },
   { key: "timeline", label: "Timeline", icon: "📅", path: null },
 ];
@@ -62,6 +74,7 @@ const PatientHome = () => {
   const [recoverySignal, setRecoverySignal] = useState(FALLBACK_RECOVERY_SIGNAL);
   const [loadingSignal, setLoadingSignal] = useState(true);
   const [patientProfile, setPatientProfile] = useState(null);
+  const [checkIns, setCheckIns] = useState([]);
 
   useEffect(() => {
     api
@@ -69,6 +82,7 @@ const PatientHome = () => {
       .then(({ data }) => {
         setPatientProfile(data.patient || null);
         const raw = data.checkIns || [];
+        setCheckIns(raw);
         if (Array.isArray(raw) && raw.length > 0) {
           const last7 = raw.slice(0, 7).reverse().map((c, i) => ({
             label: `D${i + 1}`,
@@ -96,18 +110,27 @@ const PatientHome = () => {
   const currentDay = Math.min(daysSinceDischarge, monitoringDuration);
   const progressPct = Math.min(100, Math.round((currentDay / monitoringDuration) * 100));
 
-  const streakCount = recoverySignal.length;
+  const streakCount = getStreak(checkIns);
+  const milestones = [
+    ["First step", "👣", "#06b6d4", checkIns.length > 0, "complete your first check-in"],
+    ["One week strong", "🔥", "#f97316", streakCount >= 7, "a 7 day check-in streak"],
+    ["Medicine hero", "💊", "#22c55e", checkIns.length >= 7 && checkIns.slice(0, 7).every((item) => item.medicationStatus === "Taken as planned"), "7 consecutive days with all medicines taken"],
+    ["Halfway there", "★", "#facc15", currentDay >= 15, "reach Day 15"],
+    ["Consistent", "🛡", "#3b82f6", streakCount >= 14, "a 14 day check-in streak"],
+    ["Almost done", "🏆", "#a855f7", currentDay >= 25, "reach Day 25"],
+    ["Recovery complete", "♥", "#ef4444", currentDay >= 30, "complete Day 30"],
+  ];
+  const earnedCount = milestones.filter((item) => item[3]).length;
+
+  const chartWidth = 560;
+  const chartHeight = 140;
+  const values = recoverySignal.map((d) => d.value);
+  const { area, line, points } = buildAreaPath(values, chartWidth, chartHeight);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
-
-  // Chart geometry
-  const chartWidth = 560;
-  const chartHeight = 140;
-  const values = recoverySignal.map((d) => d.value);
-  const { area, line, points } = buildAreaPath(values, chartWidth, chartHeight);
 
   return (
     <div
@@ -210,57 +233,14 @@ const PatientHome = () => {
           <div className="pointer-events-none absolute -bottom-20 left-10 h-56 w-56 rounded-full opacity-10 blur-2xl" style={{ background: "#e9ad7e" }} />
           <div className="pointer-events-none absolute right-1/4 -top-6 h-32 w-32 rounded-full opacity-10" style={{ background: "#84a98c" }} />
           <div className="pointer-events-none hidden lg:block absolute right-16 top-1/2 -translate-y-1/2 h-64 w-64 rounded-full border-[48px] border-white/[0.06]" />
-
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 max-w-4xl">
             <div className="max-w-md">
-              <span
-                className="inline-flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.14em] uppercase px-3 py-1.5 rounded-full mb-5"
-                style={{ background: "rgba(255,255,255,0.12)", color: "#f5c49d", border: "1px solid rgba(255,255,255,0.15)" }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#f5c49d" }} />
-                Today's focus
-              </span>
-
-              <h2 className="text-2xl font-extrabold mb-3 leading-[1.1] tracking-[-0.03em] sm:text-3xl" style={{ color: "#FFFFFF" }}>
-                A small check-in can make a big difference.
-              </h2>
-              <p className="mb-6 text-sm leading-relaxed" style={{ color: "#d7ebe3" }}>
-                Tell us how you feel today. Your care team will stay informed.
-              </p>
-              <button
-                onClick={() => navigate("/patient/check-in")}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-extrabold cursor-pointer transition hover:opacity-90"
-                style={{ background: "#FFFFFF", color: "#1f6b62" }}
-              >
-                Start today's check-in <span>→</span>
-              </button>
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.14em] uppercase px-3 py-1.5 rounded-full mb-5" style={{ background: "rgba(255,255,255,0.12)", color: "#f5c49d", border: "1px solid rgba(255,255,255,0.15)" }}><span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#f5c49d" }} />Today's focus</span>
+              <h2 className="text-2xl font-extrabold mb-3 leading-[1.1] tracking-[-0.03em] sm:text-3xl" style={{ color: "#FFFFFF" }}>A small check-in can make a big difference.</h2>
+              <p className="mb-6 text-sm leading-relaxed" style={{ color: "#d7ebe3" }}>Tell us how you feel today. Your care team will stay informed.</p>
+              <button onClick={() => navigate("/patient/check-in")} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-extrabold cursor-pointer transition hover:opacity-90" style={{ background: "#FFFFFF", color: "#1f6b62" }}>Start today's check-in <span>→</span></button>
             </div>
-
-            {/* Day-of-recovery progress ring -- desktop only, fills the empty space */}
-            <div className="hidden lg:flex items-center gap-5 shrink-0">
-              <div className="relative w-28 h-28">
-                <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
-                  <circle
-                    cx="50" cy="50" r="42" fill="none"
-                    stroke="#f5c49d" strokeWidth="8" strokeLinecap="round"
-                    strokeDasharray={`${(progressPct / 100) * 263.9} 263.9`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl font-extrabold" style={{ color: "#FFFFFF" }}>{currentDay}</span>
-                  <span className="text-[9px] uppercase tracking-wider" style={{ color: "#d7ebe3" }}>of {monitoringDuration}d</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#f5c49d" }}>
-                  Recovery progress
-                </p>
-                <p className="text-sm" style={{ color: "#d7ebe3" }}>
-                  {progressPct}% through your<br />monitoring window
-                </p>
-              </div>
-            </div>
+            <div className="hidden lg:flex items-center gap-5 shrink-0"><div className="relative w-28 h-28"><svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" /><circle cx="50" cy="50" r="42" fill="none" stroke="#f5c49d" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(progressPct / 100) * 263.9} 263.9`} /></svg><div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-extrabold" style={{ color: "#FFFFFF" }}>{currentDay}</span><span className="text-[9px] uppercase tracking-wider" style={{ color: "#d7ebe3" }}>of {monitoringDuration}d</span></div></div><div><p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#f5c49d" }}>Recovery progress</p><p className="text-sm" style={{ color: "#d7ebe3" }}>{progressPct}% through your<br />monitoring window</p></div></div>
           </div>
         </div>
 
@@ -305,51 +285,11 @@ const PatientHome = () => {
               className="rounded-2xl px-4 py-4 lg:px-6 lg:py-5"
               style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "#111111" }}>Recovery signal</p>
-                  <p className="text-xs" style={{ color: "#6B7280" }}>Your recent check-in pattern</p>
-                </div>
-                <span
-                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1"
-                  style={{ background: "#E7F0E5", color: "#386641" }}
-                >
-                  ● Monitoring
-                </span>
-              </div>
-
-              {loadingSignal ? (
-                <p className="text-xs" style={{ color: "#6B7280" }}>Loading...</p>
-              ) : (
-                <div>
-                  <svg
-                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="w-full"
-                    style={{ height: 140 }}
-                    preserveAspectRatio="none"
-                  >
-                    <defs>
-                      <linearGradient id="recoveryFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#386641" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#386641" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d={area} fill="url(#recoveryFill)" />
-                    <path d={line} fill="none" stroke="#386641" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    {points?.map(([x, y], i) => (
-                      <circle key={i} cx={x} cy={y} r="3.5" fill="#386641" stroke="#FFFFFF" strokeWidth="1.5" />
-                    ))}
-                  </svg>
-                  <div className="flex justify-between mt-1">
-                    {recoverySignal.map((d) => (
-                      <span key={d.label} className="text-[10px] flex-1 text-center" style={{ color: "#6B7280" }}>
-                        {d.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center justify-between mb-4"><div><p className="text-sm font-bold" style={{ color: "#111111" }}>Recovery signal</p><p className="text-xs" style={{ color: "#6B7280" }}>Your recent check-in pattern</p></div><span className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1" style={{ background: "#E7F0E5", color: "#386641" }}>● Monitoring</span></div>
+              {loadingSignal ? <p className="text-xs" style={{ color: "#6B7280" }}>Loading...</p> : <div><svg viewBox="0 0 560 140" className="w-full" style={{ height: 140 }} preserveAspectRatio="none"><defs><linearGradient id="recoveryFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#386641" stopOpacity="0.25" /><stop offset="100%" stopColor="#386641" stopOpacity="0" /></linearGradient></defs><path d={area} fill="url(#recoveryFill)" /><path d={line} fill="none" stroke="#386641" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />{points?.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" fill="#386641" stroke="#FFFFFF" strokeWidth="1.5" />)}</svg><div className="flex justify-between mt-1">{recoverySignal.map((d) => <span key={d.label} className="text-[10px] flex-1 text-center" style={{ color: "#6B7280" }}>{d.label}</span>)}</div></div>}
             </div>
+
+            <Milestones milestones={milestones} earnedCount={earnedCount} />
 
             {/* Quick actions -- mobile/tablet only, moves to sidebar on desktop */}
             <div className="grid grid-cols-2 gap-3 pb-2 lg:hidden">
@@ -448,3 +388,13 @@ const PatientHome = () => {
 };
 
 export default PatientHome;
+
+const Milestones = ({ milestones, earnedCount }) => {
+  const [selected, setSelected] = useState(null);
+  return <section className="pt-2">
+    <div className="flex items-center justify-between"><h3 className="text-base font-bold" style={{ color: "#111111" }}>Your milestones</h3><span className="text-xs font-bold" style={{ color: "#6B7280" }}>{earnedCount} of 7 earned</span></div>
+    <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+      {milestones.map(([name, icon, color, earned, requirement]) => <button key={name} onClick={() => setSelected(selected === name ? null : name)} className="relative min-w-[132px] rounded-2xl p-4 text-left" style={{ background: "#FFFFFF", border: `1px solid ${earned ? color : "#E4E4E7"}`, boxShadow: earned ? `0 0 12px ${color}55` : "none", filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.65 }}><span className="text-2xl">{earned ? icon : "🔒"}</span><strong className="mt-2 block text-xs" style={{ color: "#111111" }}>{name}</strong><span className="mt-1 block text-[10px] leading-4" style={{ color: "#6B7280" }}>{selected === name ? (earned ? "Earned today" : `Complete ${requirement} to earn this`) : earned ? "Earned" : "Locked"}</span></button>)}
+    </div>
+  </section>;
+};

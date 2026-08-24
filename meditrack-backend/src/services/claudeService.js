@@ -6,6 +6,67 @@ const client = new Anthropic.default({
 
 const MODEL = "claude-sonnet-4-20250514";
 
+const COMPANION_SYSTEM_PROMPT = (patientName, condition, day, total) => `You are a compassionate medical AI assistant for post-discharge patients in India.
+Patient: ${patientName || "the patient"}, Condition: ${condition || "recovery"}, Day ${day || 1} of ${total || 30} days recovery.
+
+Respond in the SAME language the patient used (Hindi, Marathi, or English — detect automatically).
+
+Structure your response EXACTLY like this:
+
+🔍 What you described:
+[1-2 line summary in simple words]
+
+📋 Why this may be happening:
+[Plain language explanation, no medical jargon, 2-3 lines max]
+
+🏠 What you can do at home right now:
+- [point 1]
+- [point 2]
+- [point 3]
+
+⚠️ Contact your doctor if:
+[Clear threshold — when to escalate]
+
+Your care team has been notified about this conversation.
+
+RULES:
+- Never diagnose
+- Never say stop taking medicines
+- Never replace doctor advice
+- Always encourage care team contact for serious symptoms
+- Keep language simple and reassuring`;
+
+const generateCompanionReply = async ({ messages, patientName, condition, day, total }) => {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 900,
+    system: COMPANION_SYSTEM_PROMPT(patientName, condition, day, total),
+    messages: messages.map((item) => ({ role: item.role === "assistant" ? "assistant" : "user", content: item.content })),
+  });
+  return response.content[0].text.trim();
+};
+
+const extractVoiceCheckIn = async ({ text, patientName, condition, day, total }) => {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 700,
+    system: "Extract post-discharge patient voice notes. Return ONLY valid JSON. Never diagnose.",
+    messages: [{ role: "user", content: `Patient: ${patientName || "patient"}. Condition: ${condition || "recovery"}. Day ${day || 1} of ${total || 30}.\nVoice transcript:\n${text}\n\nReturn exactly: {"symptoms":[{"name":"","severity":1,"bodyPart":""}],"medicationTaken":true,"energyLevel":3,"activityCompleted":"","overallMood":"","aiSummary":"","urgencyFlag":false}. Use severity and energyLevel from 1-5.` }],
+  });
+  const match = response.content[0].text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Claude returned invalid extraction data.");
+  const parsed = JSON.parse(match[0]);
+  return {
+    symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map((item) => ({ name: String(item.name || "Reported symptom"), severity: Math.min(5, Math.max(1, Number(item.severity) || 3)), bodyPart: String(item.bodyPart || "") })) : [],
+    medicationTaken: Boolean(parsed.medicationTaken),
+    energyLevel: Math.min(5, Math.max(1, Number(parsed.energyLevel) || 3)),
+    activityCompleted: String(parsed.activityCompleted || ""),
+    overallMood: String(parsed.overallMood || ""),
+    aiSummary: String(parsed.aiSummary || ""),
+    urgencyFlag: Boolean(parsed.urgencyFlag),
+  };
+};
+
 /**
  * Analyse free-text / voice-transcribed symptom description.
  * Returns structured symptom data the check-in form can consume.
@@ -163,4 +224,4 @@ Keep it warm, professional, and concise.`,
   }
 };
 
-module.exports = { analyzeSymptomText, generateCheckInResponse };
+module.exports = { analyzeSymptomText, generateCheckInResponse, generateCompanionReply, extractVoiceCheckIn, COMPANION_SYSTEM_PROMPT };
