@@ -7,7 +7,9 @@ import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import PatientDetail from "./pages/patients/PatientDetail";
 import EnrollPatient from "./pages/patients/EnrollPatient";
-import PatientHome from "./pages/patients/PatientHome";
+import PatientHome from "./pages/patients/patienthome";
+import PatientCheckIn from "./pages/patients/PatientCheckIn";
+import RecoveryPlan from "./pages/patients/RecoveryPlan";
 import AdminPanel from "./pages/admin/AdminPanel";
 import "./index.css";
 
@@ -54,6 +56,14 @@ const App = () => {
                   <PatientHome />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/patient/check-in"
+              element={<ProtectedRoute allowedRoles={["patient"]}><PatientCheckIn /></ProtectedRoute>}
+            />
+            <Route
+              path="/patient/plan"
+              element={<ProtectedRoute allowedRoles={["patient"]}><RecoveryPlan /></ProtectedRoute>}
             />
 
             {/* Authenticated layout with sidebar */}

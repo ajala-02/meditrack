@@ -68,7 +68,7 @@ const findStaffToNotify = async (hospitalId, riskStatus) => {
  */
 const submitCheckIn = async (req, res) => {
   try {
-    const { symptoms, language } = req.body;
+    const { symptoms, language, medicationStatus = "", activity = "", note = "" } = req.body;
 
     if (!symptoms || !Array.isArray(symptoms) || symptoms.length === 0) {
       return res.status(400).json({ message: "At least one symptom is required." });
@@ -86,6 +86,25 @@ const submitCheckIn = async (req, res) => {
       });
     }
 
+    const now = new Date();
+    const checkInDay = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfTomorrow = new Date(startOfDay);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const existingCheckIn = await CheckIn.findOne({
+      patientId: patient._id,
+      $or: [
+        { checkInDay },
+        { date: { $gte: startOfDay, $lt: startOfTomorrow } },
+      ],
+    }).lean();
+
+    if (existingCheckIn) {
+      return res.status(409).json({
+        message: "Today's check-in has already been submitted. Please contact your care team if your symptoms change or worsen.",
+      });
+    }
+
     // ── 1. Calculate triage score ───────────────────────
     const { overallScore, riskStatus, hasAIFlag } = calculateTriageScore(symptoms);
 
@@ -100,11 +119,15 @@ const submitCheckIn = async (req, res) => {
     // ── 3. Save the check-in ────────────────────────────
     const checkIn = await CheckIn.create({
       patientId: patient._id,
-      date: new Date(),
+      date: now,
+      checkInDay,
       symptoms,
       overallScore,
       riskStatus,
       aiResponse,
+      medicationStatus,
+      activity,
+      note,
     });
 
     // ── 4. Find staff & create alert ────────────────────
@@ -181,10 +204,18 @@ const submitCheckIn = async (req, res) => {
         riskStatus,
         aiResponse,
         symptoms: checkIn.symptoms,
+        medicationStatus: checkIn.medicationStatus,
+        activity: checkIn.activity,
+        note: checkIn.note,
       },
       trendEscalation: isStagnant,
     });
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message: "Today's check-in has already been submitted. Please contact your care team if your symptoms change or worsen.",
+      });
+    }
     res.status(500).json({ message: "Check-in failed.", error: error.message });
   }
 };

@@ -30,9 +30,9 @@ const Login = () => {
   };
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="h-screen overflow-hidden bg-white">
       {/* <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1240px] overflow-hidden rounded-[32px] border border-[#dce7e1] bg-white shadow-[0_24px_70px_rgba(31,84,73,0.10)] lg:min-h-[720px] lg:grid-cols-[1.08fr_0.92fr]"> */}
-      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
+      <div className="grid h-full lg:grid-cols-[1.08fr_0.92fr]">
         <section className="relative overflow-hidden bg-[#1f6b62] px-7 py-8 text-white sm:px-11 sm:py-12 lg:flex lg:flex-col lg:justify-between lg:px-14 lg:py-14">
           <div className="pointer-events-none absolute -right-24 -top-20 h-72 w-72 rounded-full border-[42px] border-white/10" />
           <div className="pointer-events-none absolute -bottom-28 left-20 h-72 w-72 rounded-full bg-[#e9ad7e]/10 blur-2xl" />
@@ -40,8 +40,8 @@ const Login = () => {
             <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#1f6b62] shadow-lg shadow-black/10"><svg className="h-6 w-6 fill-current" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg></div><span className="text-2xl font-extrabold tracking-tight">MediTrack</span></div>
             <div className="mt-16 max-w-[520px] lg:mt-24"><div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-extrabold tracking-[0.14em] text-[#f5c49d]"><span className="h-1.5 w-1.5 rounded-full bg-[#f5c49d]" /> POST-DISCHARGE CARE</div><h1 className="mt-6 text-4xl font-extrabold leading-[1.08] tracking-[-0.045em] sm:text-5xl lg:text-[58px]">Recovery feels better with someone beside you.</h1><p className="mt-6 max-w-md text-base leading-7 text-[#d7ebe3] sm:text-lg">A reassuring place to check in, follow your recovery plan, and stay connected to your care team after discharge.</p></div>
           </div>
-          <div className="relative mt-12 grid gap-3 sm:grid-cols-3 lg:mt-16 lg:grid-cols-1">
-            {[["✓", "2-minute check-ins", "A small update keeps your team informed."], ["⌁", "Care that notices", "Symptoms are reviewed with your recovery plan."], ["↗", "Support when needed", "Your care team is only a message away."]].map(([icon, title, detail]) => <div key={title} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur-sm"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold">{icon}</div><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs leading-5 text-[#c9e0d8]">{detail}</p></div></div>)}
+          <div className="relative mt-auto grid grid-cols-3 gap-2 pt-6">
+            {[["✓", "2-minute check-ins", "A small update keeps your team informed."], ["⌁", "Care that notices", "Symptoms are reviewed with your recovery plan."], ["↗", "Support when needed", "Your care team is only a message away."]].map(([icon, title, detail]) => <div key={title} className="flex flex-col gap-1.5 rounded-xl border border-white/10 bg-white/[0.08] p-2.5 backdrop-blur-sm"><div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/10 text-xs font-bold">{icon}</div><p className="text-xs font-bold leading-tight">{title}</p><p className="text-[10px] leading-4 text-[#c9e0d8]">{detail}</p></div>)}
           </div>
         </section>
 
