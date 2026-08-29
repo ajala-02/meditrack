@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const Anthropic = require("@anthropic-ai/sdk");
+const Groq = require("groq-sdk");
 const User = require("../models/User");
 const Patient = require("../models/Patient");
 const CheckIn = require("../models/CheckIn");
@@ -328,8 +328,8 @@ const generateInstructions = async (req, res) => {
       });
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
     });
 
     const prompt = `You are a medical assistant. Generate recovery instructions for a patient with the following details:
@@ -348,13 +348,16 @@ Return the instructions as a valid JSON object with the following structure:
 }
 Ensure the output is ONLY the raw JSON object and nothing else. No markdown formatting.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+    const message = await groq.chat.completions.create({
+      model: process.env.GROQ_MODEL || "qwen/qwen3.8-27b",
       max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: "You are a medical assistant." },
+        { role: "user", content: prompt },
+      ],
     });
 
-    const textResponse = message.content[0].text;
+    const textResponse = message.choices[0].message.content;
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {

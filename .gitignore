@@ -2,3 +2,6 @@ node_modules/
 .env
 .DS_Store
 meditrack.zip
+web/dist/
+web/dist/
+package-lock.json

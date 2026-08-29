@@ -231,13 +231,10 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.quickGrid}>
-          <Pressable
-            onPress={openPulse}
-            style={({ pressed }) => [styles.quickCard, pressed && styles.pressed]}
-          >
-            <View style={[styles.quickIcon, styles.quickIconGreen]}><Feather name="mic" size={19} color="#1F6B62" /></View>
-            <Text style={styles.quickTitle}>Recovery Pulse</Text>
-            <Text style={styles.quickCopy}>Speak or tap how you feel</Text>
+          <Pressable onPress={() => router.push('/checkin')} style={({ pressed }) => [styles.quickCard, pressed && styles.pressed]}>
+            <View style={[styles.quickIcon, styles.quickIconGreen]}><Feather name="check-square" size={19} color="#1F6B62" /></View>
+            <Text style={styles.quickTitle}>Today's check-in</Text>
+            <Text style={styles.quickCopy}>Share another recovery update</Text>
             <View style={styles.quickArrow}><Feather name="arrow-up-right" size={16} color="#1F6B62" /></View>
           </Pressable>
           <Pressable onPress={() => router.push('/messages')} style={({ pressed }) => [styles.quickCard, pressed && styles.pressed]}>

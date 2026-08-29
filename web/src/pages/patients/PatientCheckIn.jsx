@@ -23,13 +23,6 @@ const SYMPTOMS = [
 const SEVERITY_LABELS = ["Very mild", "Mild", "Moderate", "Severe", "Very severe"];
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-const isToday = (date) => {
-  if (!date) return false;
-  const value = new Date(date);
-  const now = new Date();
-  return value.getFullYear() === now.getFullYear() && value.getMonth() === now.getMonth() && value.getDate() === now.getDate();
-};
-
 const Button = ({ children, className = "", ...props }) => (
   <button
     className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${className}`}
@@ -45,7 +38,6 @@ const PatientCheckIn = () => {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [submitted, setSubmitted] = useState(null);
   const [feeling, setFeeling] = useState("");
   const [mode, setMode] = useState("choice");
@@ -59,16 +51,7 @@ const PatientCheckIn = () => {
   const [voiceTranscript, setVoiceTranscript] = useState("");
 
   useEffect(() => {
-    let active = true;
-    api
-      .get("/patients/me")
-      .then(({ data }) => {
-        if (!active) return;
-        setAlreadySubmitted((data.checkIns || []).some((checkIn) => isToday(checkIn.date)));
-      })
-      .catch(() => active && addToast("We could not load your recovery details. Please try again.", "watch"))
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
+    setLoading(false);
   }, [addToast]);
 
   const currentFeeling = FEELINGS.find((item) => item.id === feeling);
@@ -121,7 +104,6 @@ const PatientCheckIn = () => {
       const symptoms = (extracted.symptoms || []).map((item) => ({ ...item, source: "voiceText", aiFlag: extracted.urgencyFlag }));
       const { data } = await api.post("/checkins", { symptoms: symptoms.length ? symptoms : [{ name: "General recovery update", severity: 1, aiFlag: false }], medicationStatus: extracted.medicationTaken ? "Taken as planned" : "Not taken", activity: extracted.activityCompleted, note: voiceTranscript, language: "auto" });
       setSubmitted(data.checkIn);
-      setAlreadySubmitted(true);
     } catch (error) { addToast(error.response?.data?.message || "Your voice check-in could not be sent.", "critical"); }
     finally { setSubmitting(false); }
   };
@@ -131,7 +113,6 @@ const PatientCheckIn = () => {
     try {
       const { data } = await api.post("/checkins", { symptoms: submittedSymptoms, medicationStatus, activity, note, language: "English" });
       setSubmitted({ ...data.checkIn, note, medicationStatus, activity });
-      setAlreadySubmitted(true);
     } catch (error) {
       addToast(error.response?.data?.message || "Your check-in could not be sent. Please try again.", "critical");
     } finally {
@@ -141,22 +122,6 @@ const PatientCheckIn = () => {
 
   if (loading) {
     return <div className="min-h-screen grid place-items-center text-sm" style={{ background: "#F5F0EB", color: "#1f6b62" }}>Loading your check-in…</div>;
-  }
-
-  if (alreadySubmitted && !submitted) {
-    return (
-      <CheckInFrame title="Today's check-in is complete" onBack={() => navigate("/patient/home")}>
-        <div className="rounded-2xl p-7 text-center" style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}>
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full text-2xl" style={{ background: "#E7F0E5" }}>✓</div>
-          <h2 className="text-xl font-extrabold" style={{ color: "#111111" }}>Thank you for checking in.</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-6" style={{ color: "#6B7280" }}>Your care team has today’s update. You can return tomorrow for your next check-in.</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button onClick={() => navigate("/patient/plan")} style={{ background: "#1f6b62", color: "#FFFFFF" }}>View recovery guide</Button>
-            <Button onClick={() => navigate("/patient/home")} style={{ background: "#F5F0EB", color: "#2F3E46" }}>Back to home</Button>
-          </div>
-        </div>
-      </CheckInFrame>
-    );
   }
 
   if (mode === "choice") return <CheckInFrame title="Today's check-in" onBack={() => navigate("/patient/home")}><ChoiceStep onVoice={() => setMode("voice")} onForm={() => setMode("form")} /></CheckInFrame>;
@@ -214,7 +179,7 @@ const CheckInFrame = ({ title, onBack, children }) => (
   <main className="min-h-screen px-5 py-6 sm:px-8" style={{ background: "#F5F0EB", fontFamily: "'Inter', system-ui, sans-serif" }}>
     <div className="mx-auto max-w-2xl">
       <button onClick={onBack} className="mb-7 text-sm font-bold" style={{ color: "#1f6b62" }}>← Back to recovery space</button>
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "#BC6C25" }}>Recovery pulse</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: "#BC6C25" }}>Today's check-in</p>
       <h1 className="mt-1 text-3xl font-extrabold tracking-tight" style={{ color: "#111111" }}>{title}</h1>
       <p className="mt-2 text-sm" style={{ color: "#6B7280" }}>A few quick answers help your care team support you.</p>
       <div className="mt-7">{children}</div>

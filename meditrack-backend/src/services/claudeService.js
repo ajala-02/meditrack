@@ -1,31 +1,53 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const Groq = require("groq-sdk");
 
-const client = new Anthropic.default({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const client = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
+
+const createCompletion = async ({ system, messages, max_tokens }) => {
+  const response = await client.chat.completions.create({
+    model: MODEL,
+    max_tokens,
+    messages: [{ role: "system", content: system }, ...messages],
+  });
+  return response.choices[0].message.content.trim();
+};
 
 const COMPANION_SYSTEM_PROMPT = (patientName, condition, day, total) => `You are a compassionate medical AI assistant for post-discharge patients in India.
 Patient: ${patientName || "the patient"}, Condition: ${condition || "recovery"}, Day ${day || 1} of ${total || 30} days recovery.
 
 Respond in the SAME language the patient used (Hindi, Marathi, or English — detect automatically).
 
-Structure your response EXACTLY like this:
+Structure your response EXACTLY in this order, using these headings:
 
-🔍 What you described:
-[1-2 line summary in simple words]
+1. 🔍 What you described
+- Summarize the patient's concern in simple language.
 
-📋 Why this may be happening:
-[Plain language explanation, no medical jargon, 2-3 lines max]
+2. 📋 Why this may be happening
+- Explain 2-3 possible, non-diagnostic reasons in plain language.
+- Clearly say when the cause cannot be determined without a clinician.
 
-🏠 What you can do at home right now:
-- [point 1]
-- [point 2]
-- [point 3]
+3. 🏠 Home remedies and immediate care
+- Give 3-5 safe, practical steps the patient can take at home.
+- Never recommend changing or stopping prescribed medicines.
 
-⚠️ Contact your doctor if:
-[Clear threshold — when to escalate]
+4. 🚶 Exercise and movement
+- Suggest only gentle, appropriate movement if it is reasonably safe.
+- Include duration and limits when useful.
+- If symptoms could be serious, say to rest and avoid exercise until the care team advises.
+
+5. 👀 Symptoms to monitor
+- List specific symptoms or changes to watch for over the next 24 hours.
+
+6. ⚠️ Contact your doctor or seek urgent help if
+- Give clear escalation thresholds.
+- For chest pain, severe breathing difficulty, fainting, sudden weakness, or rapidly worsening symptoms, advise urgent medical care immediately.
+
+7. 📝 Detailed recovery report
+- Summarize the reported concern, possible explanations, recommended actions, exercise guidance, warning signs, and what the patient should tell their care team.
+- Keep this report specific to the patient's message and condition, but do not diagnose.
 
 Your care team has been notified about this conversation.
 
@@ -34,26 +56,24 @@ RULES:
 - Never say stop taking medicines
 - Never replace doctor advice
 - Always encourage care team contact for serious symptoms
+- Do not invent measurements, test results, medications, or diagnoses.
 - Keep language simple and reassuring`;
 
 const generateCompanionReply = async ({ messages, patientName, condition, day, total }) => {
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 900,
+  return createCompletion({
     system: COMPANION_SYSTEM_PROMPT(patientName, condition, day, total),
+    max_tokens: 1200,
     messages: messages.map((item) => ({ role: item.role === "assistant" ? "assistant" : "user", content: item.content })),
   });
-  return response.content[0].text.trim();
 };
 
 const extractVoiceCheckIn = async ({ text, patientName, condition, day, total }) => {
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 700,
+  const content = await createCompletion({
     system: "Extract post-discharge patient voice notes. Return ONLY valid JSON. Never diagnose.",
+    max_tokens: 700,
     messages: [{ role: "user", content: `Patient: ${patientName || "patient"}. Condition: ${condition || "recovery"}. Day ${day || 1} of ${total || 30}.\nVoice transcript:\n${text}\n\nReturn exactly: {"symptoms":[{"name":"","severity":1,"bodyPart":""}],"medicationTaken":true,"energyLevel":3,"activityCompleted":"","overallMood":"","aiSummary":"","urgencyFlag":false}. Use severity and energyLevel from 1-5.` }],
   });
-  const match = response.content[0].text.match(/\{[\s\S]*\}/);
+  const match = content.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("Claude returned invalid extraction data.");
   const parsed = JSON.parse(match[0]);
   return {
@@ -86,9 +106,9 @@ const extractVoiceCheckIn = async ({ text, patientName, condition, day, total })
  */
 const analyzeSymptomText = async (text, condition, language = "en") => {
   try {
-    const response = await client.messages.create({
-      model: MODEL,
+    const content = await createCompletion({
       max_tokens: 512,
+      system: "You are a medical symptom extraction assistant.",
       messages: [
         {
           role: "user",
@@ -124,7 +144,6 @@ Set aiFlag=true ONLY for symptoms that could indicate serious complications like
       ],
     });
 
-    const content = response.content[0].text.trim();
     const parsed = JSON.parse(content);
 
     // Validate and clamp values
@@ -177,9 +196,9 @@ const generateCheckInResponse = async (symptoms, riskStatus, condition, language
           ? "Respond in Marathi (Devanagari script)."
           : "Respond in English.";
 
-    const response = await client.messages.create({
-      model: MODEL,
+    const content = await createCompletion({
       max_tokens: 512,
+      system: "You are a compassionate medical assistant.",
       messages: [
         {
           role: "user",
@@ -206,7 +225,7 @@ Keep it warm, professional, and concise.`,
       ],
     });
 
-    return response.content[0].text.trim();
+    return content;
   } catch (error) {
     console.error("Claude check-in response failed:", error.message);
 

@@ -104,7 +104,7 @@ const checkInSchema = new mongoose.Schema(
 
 // ── Indexes ─────────────────────────────────────────────
 checkInSchema.index({ patientId: 1, date: -1 }); // patient timeline
-checkInSchema.index({ patientId: 1, checkInDay: 1 }, { unique: true, sparse: true }); // one daily check-in
+checkInSchema.index({ patientId: 1, checkInDay: 1 }); // support check-in history queries
 checkInSchema.index({ riskStatus: 1 });           // filter by severity
 checkInSchema.index({ patientId: 1, createdAt: -1 }); // trend queries
 

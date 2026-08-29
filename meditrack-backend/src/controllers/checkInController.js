@@ -88,22 +88,6 @@ const submitCheckIn = async (req, res) => {
 
     const now = new Date();
     const checkInDay = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfTomorrow = new Date(startOfDay);
-    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-    const existingCheckIn = await CheckIn.findOne({
-      patientId: patient._id,
-      $or: [
-        { checkInDay },
-        { date: { $gte: startOfDay, $lt: startOfTomorrow } },
-      ],
-    }).lean();
-
-    if (existingCheckIn) {
-      return res.status(409).json({
-        message: "Today's check-in has already been submitted. Please contact your care team if your symptoms change or worsen.",
-      });
-    }
 
     // ── 1. Calculate triage score ───────────────────────
     const { overallScore, riskStatus, hasAIFlag } = calculateTriageScore(symptoms);
@@ -212,9 +196,7 @@ const submitCheckIn = async (req, res) => {
     });
   } catch (error) {
     if (error?.code === 11000) {
-      return res.status(409).json({
-        message: "Today's check-in has already been submitted. Please contact your care team if your symptoms change or worsen.",
-      });
+      return res.status(409).json({ message: "This check-in could not be saved. Please try again." });
     }
     res.status(500).json({ message: "Check-in failed.", error: error.message });
   }

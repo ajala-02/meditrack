@@ -126,7 +126,7 @@ export default function CheckInScreen() {
 
   const submitCheckIn = async () => {
     if (!activeSymptoms.length) {
-      Alert.alert('Add an update first', 'Select a symptom level or use Recovery Pulse to describe how you feel.');
+      Alert.alert('Add an update first', 'Select a symptom level or use a voice check-in to describe how you feel.');
       return;
     }
     setIsSubmitting(true);
@@ -182,7 +182,7 @@ export default function CheckInScreen() {
           <Text style={styles.headerCopy}>Your update helps your care team support you at the right time.</Text>
           <Pressable onPress={openVoice} style={({ pressed }) => [styles.voiceCard, pressed && styles.pressed]}>
             <View style={styles.voiceIcon}><Feather name="mic" size={21} color="#1F6B62" /></View>
-            <View style={styles.voiceCardCopy}><Text style={styles.voiceCardTitle}>Use Recovery Pulse</Text><Text style={styles.voiceCardSubtext}>Speak naturally and AI will identify symptoms.</Text></View>
+            <View style={styles.voiceCardCopy}><Text style={styles.voiceCardTitle}>Use voice check-in</Text><Text style={styles.voiceCardSubtext}>Speak naturally and AI will identify symptoms.</Text></View>
             <Feather name="chevron-right" size={20} color="#6E8A82" />
           </Pressable>
           <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR RATE EACH SYMPTOM</Text><View style={styles.dividerLine} /></View>
@@ -210,7 +210,7 @@ export default function CheckInScreen() {
 
       <Modal animationType="slide" transparent visible={voiceVisible} onRequestClose={() => setVoiceVisible(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setVoiceVisible(false)}><Pressable style={styles.voiceSheet} onPress={(event) => event.stopPropagation()}>
-          <View style={styles.sheetHandle} /><View style={styles.sheetIcon}><Feather name="mic" size={22} color="#1F6B62" /></View><Text style={styles.sheetTitle}>Recovery Pulse</Text><Text style={styles.sheetCopy}>Say what is different today. We will turn your words into a symptom you can review before submitting.</Text>
+          <View style={styles.sheetHandle} /><View style={styles.sheetIcon}><Feather name="mic" size={22} color="#1F6B62" /></View><Text style={styles.sheetTitle}>Voice check-in</Text><Text style={styles.sheetCopy}>Say what is different today. We will turn your words into a symptom you can review before submitting.</Text>
           <Pressable onPress={isListening ? () => recognitionRef.current?.stop() : startListening} style={({ pressed }) => [styles.listenButton, (pressed || isListening) && styles.listenActive]}><Feather name={isListening ? 'square' : 'mic'} size={18} color="#FFFFFF" /><Text style={styles.listenText}>{isListening ? 'Listening… tap to stop' : 'Speak your update'}</Text></Pressable>
           <Text style={styles.orLabel}>OR TYPE YOUR UPDATE</Text><TextInput multiline onChangeText={setVoiceText} placeholder="For example: I feel breathless when I walk to the kitchen." placeholderTextColor="#98A8A3" style={styles.voiceInput} textAlignVertical="top" value={voiceText} />
           {voiceNotice ? <Text style={styles.voiceNotice}>{voiceNotice}</Text> : null}
