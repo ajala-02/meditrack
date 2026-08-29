@@ -4,12 +4,13 @@ const client = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-const MODEL = process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
+const MODEL = process.env.GROQ_MODEL || "qwen/qwen3-32b";
 
 const createCompletion = async ({ system, messages, max_tokens }) => {
   const response = await client.chat.completions.create({
     model: MODEL,
-    max_tokens,
+    max_completion_tokens: max_tokens,
+    reasoning_format: "hidden", // Qwen3 is a reasoning model; hide <think> blocks so they never leak into JSON parsing
     messages: [{ role: "system", content: system }, ...messages],
   });
   return response.choices[0].message.content.trim();
@@ -74,7 +75,7 @@ const extractVoiceCheckIn = async ({ text, patientName, condition, day, total })
     messages: [{ role: "user", content: `Patient: ${patientName || "patient"}. Condition: ${condition || "recovery"}. Day ${day || 1} of ${total || 30}.\nVoice transcript:\n${text}\n\nReturn exactly: {"symptoms":[{"name":"","severity":1,"bodyPart":""}],"medicationTaken":true,"energyLevel":3,"activityCompleted":"","overallMood":"","aiSummary":"","urgencyFlag":false}. Use severity and energyLevel from 1-5.` }],
   });
   const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Claude returned invalid extraction data.");
+  if (!match) throw new Error("Groq returned invalid extraction data.");
   const parsed = JSON.parse(match[0]);
   return {
     symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map((item) => ({ name: String(item.name || "Reported symptom"), severity: Math.min(5, Math.max(1, Number(item.severity) || 3)), bodyPart: String(item.bodyPart || "") })) : [],
@@ -159,7 +160,7 @@ Set aiFlag=true ONLY for symptoms that could indicate serious complications like
         : (parsed.aiFlag ? "urgent" : "monitor"),
     };
   } catch (error) {
-    console.error("Claude symptom analysis failed:", error.message);
+    console.error("Groq symptom analysis failed:", error.message);
 
     // Fallback: return a safe default so check-in is never blocked
     return {
@@ -227,7 +228,7 @@ Keep it warm, professional, and concise.`,
 
     return content;
   } catch (error) {
-    console.error("Claude check-in response failed:", error.message);
+    console.error("Groq check-in response failed:", error.message);
 
     // Fallback responses by risk level
     const fallbacks = {
@@ -243,4 +244,4 @@ Keep it warm, professional, and concise.`,
   }
 };
 
-module.exports = { analyzeSymptomText, generateCheckInResponse, generateCompanionReply, extractVoiceCheckIn, COMPANION_SYSTEM_PROMPT };
+module.exports = { createCompletion, analyzeSymptomText, generateCheckInResponse, generateCompanionReply, extractVoiceCheckIn, COMPANION_SYSTEM_PROMPT };

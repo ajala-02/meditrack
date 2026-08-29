@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const Groq = require("groq-sdk");
+const { createCompletion } = require("../services/claudeService");
 const User = require("../models/User");
 const Patient = require("../models/Patient");
 const CheckIn = require("../models/CheckIn");
@@ -316,7 +316,8 @@ const updatePatientStatus = async (req, res) => {
 
 /**
  * POST /api/patients/generate-instructions
- * Calls Claude API to generate recovery instructions based on patient details.
+ * Calls Groq (via the shared createCompletion helper) to generate
+ * recovery instructions based on patient details.
  */
 const generateInstructions = async (req, res) => {
   try {
@@ -327,10 +328,6 @@ const generateInstructions = async (req, res) => {
         message: "Diagnosis, age, sex, and condition are required.",
       });
     }
-
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    });
 
     const prompt = `You are a medical assistant. Generate recovery instructions for a patient with the following details:
 Diagnosis: ${diagnosis}
@@ -348,20 +345,16 @@ Return the instructions as a valid JSON object with the following structure:
 }
 Ensure the output is ONLY the raw JSON object and nothing else. No markdown formatting.`;
 
-    const message = await groq.chat.completions.create({
-      model: process.env.GROQ_MODEL || "qwen/qwen3.8-27b",
+    const textResponse = await createCompletion({
+      system: "You are a medical assistant.",
       max_tokens: 1000,
-      messages: [
-        { role: "system", content: "You are a medical assistant." },
-        { role: "user", content: prompt },
-      ],
+      messages: [{ role: "user", content: prompt }],
     });
 
-    const textResponse = message.choices[0].message.content;
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-    
+
     if (!jsonMatch) {
-      throw new Error("Failed to parse JSON from Claude response.");
+      throw new Error("Failed to parse JSON from Groq response.");
     }
 
     const instructions = JSON.parse(jsonMatch[0]);
