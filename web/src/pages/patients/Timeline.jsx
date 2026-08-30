@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
-  ComposedChart,
-  Area,
+  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -483,9 +482,9 @@ const Timeline = () => {
                 {/* Recharts Container */}
                 <div className="w-full h-80 sm:h-96">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
+                    <LineChart
                       data={chartData}
-                      margin={{ top: 15, right: 15, left: -10, bottom: 20 }}
+                      margin={{ top: 15, right: 20, left: -10, bottom: 20 }}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -494,11 +493,17 @@ const Timeline = () => {
                       />
                       <XAxis
                         dataKey="day"
+                        type="number"
+                        domain={[1, totalDays]}
                         tickLine={false}
                         axisLine={{ stroke: "#E4E4E7" }}
                         tick={{ fill: "#6B7280", fontSize: 11, fontWeight: 500 }}
                         tickFormatter={(val) => `Day ${val}`}
-                        interval={totalDays <= 14 ? 1 : 4}
+                        ticks={
+                          totalDays <= 14
+                            ? Array.from({ length: totalDays }, (_, i) => i + 1)
+                            : [1, 5, 10, 15, 20, 25, totalDays]
+                        }
                       />
                       <YAxis
                         domain={[0, 5]}
@@ -532,32 +537,6 @@ const Timeline = () => {
                         wrapperStyle={{ paddingBottom: 15, fontSize: 12 }}
                       />
 
-                      {/* Shaded Areas for difference (when check-ins exist) */}
-                      {hasCheckIns && (
-                        <>
-                          <Area
-                            type="monotone"
-                            dataKey="betterRange"
-                            stroke="none"
-                            fill="#22c55e"
-                            fillOpacity={0.16}
-                            isAnimationActive={false}
-                            name="Ahead of curve"
-                            legendType="none"
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="worseRange"
-                            stroke="none"
-                            fill="#ef4444"
-                            fillOpacity={0.16}
-                            isAnimationActive={false}
-                            name="Behind curve"
-                            legendType="none"
-                          />
-                        </>
-                      )}
-
                       {/* Recovery threshold Reference Line */}
                       <ReferenceLine
                         y={2}
@@ -578,9 +557,10 @@ const Timeline = () => {
                         type="monotone"
                         dataKey="expectedScore"
                         stroke="#9CA3AF"
-                        strokeWidth={2}
+                        strokeWidth={2.5}
                         strokeDasharray="5 5"
                         dot={false}
+                        isAnimationActive={false}
                         name="Expected recovery"
                       />
 
@@ -591,21 +571,22 @@ const Timeline = () => {
                         stroke="#1f6b62"
                         strokeWidth={3}
                         dot={{
-                          r: 4,
+                          r: 5,
                           fill: "#1f6b62",
                           stroke: "#FFFFFF",
                           strokeWidth: 2,
                         }}
                         activeDot={{
-                          r: 6,
+                          r: 7,
                           fill: "#1f6b62",
                           stroke: "#FFFFFF",
                           strokeWidth: 2,
                         }}
                         connectNulls={false}
+                        isAnimationActive={false}
                         name="Your recovery"
                       />
-                    </ComposedChart>
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
 
