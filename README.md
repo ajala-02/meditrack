@@ -59,6 +59,42 @@ MediTrack is a full-stack healthcare platform that gives hospitals complete visi
 
 ---
 
+## What I Learned
+
+Building MediTrack from scratch taught me more 
+than any tutorial ever could.
+
+**System Design**
+Designing a production-grade multi-role system 
+from scratch — JWT auth with refresh token rotation, 
+role-based access control across 4 user types, 
+and a triage scoring algorithm that makes real 
+clinical routing decisions.
+
+**Real-time Engineering**
+Building Socket.io room-based architecture where 
+nurses, doctors and patients each live in isolated 
+rooms and receive only the alerts relevant to them — 
+without a single page refresh.
+
+**AI Integration**
+Integrating Groq's LLaMA model for multilingual 
+symptom extraction — patients speak in Hindi, 
+Marathi or English and the AI structures it into 
+clinical data the doctor can act on.
+
+**Full-Stack + Mobile**
+Building three separate interfaces — a Node.js API, 
+a React web dashboard, and a React Native mobile 
+app — all sharing the same backend and real-time 
+event system.
+
+**Biggest Insight**
+Healthcare software isn't just about features — 
+it's about trust. Every design decision, from the 
+triage logic to the AI disclaimer, had to consider 
+what happens when a real patient depends on it.
+
 ## Getting Started
 
 ### Backend
