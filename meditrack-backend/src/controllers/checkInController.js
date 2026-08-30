@@ -210,16 +210,32 @@ const submitCheckIn = async (req, res) => {
 const getPatientCheckIns = async (req, res) => {
   try {
     const { patientId } = req.params;
-    const { limit = 14, page = 1 } = req.query;
+    const { limit = 100, page = 1 } = req.query;
 
-    const patient = await Patient.findById(patientId).lean();
+    let patient = null;
+    if (patientId && mongoose.Types.ObjectId.isValid(patientId)) {
+      patient = await Patient.findById(patientId).lean();
+      if (!patient) {
+        patient = await Patient.findOne({ userId: patientId }).lean();
+      }
+    } else {
+      patient = await Patient.findOne({ userId: req.user.id }).lean();
+    }
+
+    if (!patient) {
+      patient = await Patient.findOne({ userId: req.user.id }).lean();
+    }
+
     if (!patient) {
       return res.status(404).json({ message: "Patient not found." });
     }
 
     // Access check: patient can see own, staff can see hospital patients
-    const isOwnPatient = patient.userId.toString() === req.user.id;
-    const isSameHospital = patient.hospitalId.toString() === req.user.hospitalId;
+    const patientUserIdStr = (patient.userId?._id || patient.userId)?.toString();
+    const patientHospitalIdStr = (patient.hospitalId?._id || patient.hospitalId)?.toString();
+
+    const isOwnPatient = req.user.role === "patient" && patientUserIdStr === req.user.id;
+    const isSameHospital = ["doctor", "nurse", "admin"].includes(req.user.role) && (!req.user.hospitalId || patientHospitalIdStr === req.user.hospitalId.toString());
 
     if (!isOwnPatient && !isSameHospital) {
       return res.status(403).json({ message: "Access denied." });
@@ -228,13 +244,13 @@ const getPatientCheckIns = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const [checkIns, total] = await Promise.all([
-      CheckIn.find({ patientId })
+      CheckIn.find({ patientId: patient._id })
         .sort({ date: -1 })
         .skip(skip)
         .limit(Number(limit))
         .populate("respondedBy", "name role")
         .lean(),
-      CheckIn.countDocuments({ patientId }),
+      CheckIn.countDocuments({ patientId: patient._id }),
     ]);
 
     // Build trend data (chronological for charting)

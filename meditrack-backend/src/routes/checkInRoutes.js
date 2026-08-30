@@ -28,6 +28,20 @@ router.get(
   getPatientCheckIns
 );
 
+// GET /api/checkins/:patientId
+router.get(
+  "/:patientId",
+  authorizeRoles("patient", "doctor", "nurse", "admin"),
+  getPatientCheckIns
+);
+
+// GET /api/checkins
+router.get(
+  "/",
+  authorizeRoles("patient", "doctor", "nurse", "admin"),
+  getPatientCheckIns
+);
+
 // PATCH /api/checkins/:id/respond — Doctor/Nurse responds to a check-in
 router.patch(
   "/:id/respond",

@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 const { createCompletion } = require("../services/claudeService");
 const User = require("../models/User");
 const Patient = require("../models/Patient");
@@ -204,18 +205,28 @@ const getMyPatient = async (req, res) => {
   try {
     const patient = await Patient.findOne({ userId: req.user.id })
       .populate("userId", "name email")
+      .populate("hospitalId", "name address")
+      .populate("enrolledBy", "name email role")
+      .populate("caregiverId", "name email role")
       .lean();
 
     if (!patient) {
       return res.status(404).json({ message: "Patient record not found." });
     }
 
+    const careTeam = await User.find({
+      hospitalId: patient.hospitalId?._id || patient.hospitalId,
+      role: { $in: ["doctor", "nurse"] },
+    })
+      .select("name email role")
+      .lean();
+
     const checkIns = await CheckIn.find({ patientId: patient._id })
       .sort({ date: -1 })
       .limit(14)
       .lean();
 
-    res.status(200).json({ patient, checkIns });
+    res.status(200).json({ patient: { ...patient, careTeam }, checkIns, careTeam });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch your recovery plan.", error: error.message });
   }
@@ -227,20 +238,50 @@ const getMyPatient = async (req, res) => {
  */
 const getPatientById = async (req, res) => {
   try {
-    const patient = await Patient.findById(req.params.id)
-      .populate("userId", "name email")
-      .populate("enrolledBy", "name email role")
-      .populate("caregiverId", "name email role")
-      .lean();
+    let patient = null;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      patient = await Patient.findById(req.params.id)
+        .populate("userId", "name email")
+        .populate("hospitalId", "name address")
+        .populate("enrolledBy", "name email role")
+        .populate("caregiverId", "name email role")
+        .lean();
+
+      if (!patient) {
+        patient = await Patient.findOne({ userId: req.params.id })
+          .populate("userId", "name email")
+          .populate("hospitalId", "name address")
+          .populate("enrolledBy", "name email role")
+          .populate("caregiverId", "name email role")
+          .lean();
+      }
+    }
 
     if (!patient) {
       return res.status(404).json({ message: "Patient not found." });
     }
 
-    // Ensure same hospital
-    if (patient.hospitalId.toString() !== req.user.hospitalId) {
-      return res.status(403).json({ message: "Access denied." });
+    const patientHospitalIdStr = (patient.hospitalId?._id || patient.hospitalId)?.toString();
+    const patientUserIdStr = (patient.userId?._id || patient.userId)?.toString();
+
+    // If logged in as patient, ensure access only to own record
+    if (req.user.role === "patient") {
+      if (patientUserIdStr !== req.user.id) {
+        return res.status(403).json({ message: "Access denied." });
+      }
+    } else {
+      // For staff (doctor/nurse/admin), ensure same hospital
+      if (req.user.hospitalId && patientHospitalIdStr !== req.user.hospitalId.toString()) {
+        return res.status(403).json({ message: "Access denied." });
+      }
     }
+
+    const careTeam = await User.find({
+      hospitalId: patient.hospitalId?._id || patient.hospitalId,
+      role: { $in: ["doctor", "nurse"] },
+    })
+      .select("name email role")
+      .lean();
 
     // Fetch last 14 check-ins, most recent first
     const checkIns = await CheckIn.find({ patientId: patient._id })
@@ -267,9 +308,10 @@ const getPatientById = async (req, res) => {
     });
 
     res.status(200).json({
-      patient,
+      patient: { ...patient, careTeam },
       checkIns: enrichedCheckIns,
       trend,
+      careTeam,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch patient.", error: error.message });

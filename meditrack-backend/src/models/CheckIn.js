@@ -15,7 +15,7 @@ const symptomSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["voiceText", "checklist"],
+      enum: ["voiceText", "checklist", "bodyMap"],
       required: true,
     },
     aiFlag: {

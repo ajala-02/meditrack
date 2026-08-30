@@ -43,10 +43,10 @@ router.get(
   getAllPatients
 );
 
-// GET /api/patients/:id — Nurse/Doctor/Admin view patient detail
+// GET /api/patients/:id — Nurse/Doctor/Admin/Patient view patient detail
 router.get(
   "/:id",
-  authorizeRoles("doctor", "nurse", "admin"),
+  authorizeRoles("doctor", "nurse", "admin", "patient"),
   getPatientById
 );
 

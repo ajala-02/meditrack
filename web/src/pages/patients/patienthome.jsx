@@ -77,8 +77,8 @@ const buildAreaPath = (values, width, height, padding = 8) => {
 const NAV_ITEMS = [
   { key: "checkin", label: "Check-In", icon: "📝", path: "/patient/check-in" },
   { key: "companion", label: "AI Companion", icon: "🤖", path: "/patient/ai-companion" },
-  { key: "messages", label: "Messages", icon: "💬", path: null },
-  { key: "timeline", label: "Timeline", icon: "📅", path: null },
+  { key: "messages", label: "Messages", icon: "💬", path: "/patient/messages" },
+  { key: "timeline", label: "Timeline", icon: "📅", path: "/patient/timeline" },
 ];
 
 const PatientHome = () => {
@@ -90,6 +90,65 @@ const PatientHome = () => {
   const [loadingSignal, setLoadingSignal] = useState(true);
   const [patientProfile, setPatientProfile] = useState(null);
   const [checkIns, setCheckIns] = useState([]);
+
+  // Emergency message modal state
+  const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [helpMessage, setHelpMessage] = useState("");
+  const [selectedQuickOption, setSelectedQuickOption] = useState("");
+  const [sendingHelpMessage, setSendingHelpMessage] = useState(false);
+  const [helpSuccess, setHelpSuccess] = useState(false);
+  const [helpMessageSent, setHelpMessageSent] = useState(false);
+
+  const quickOptions = [
+    "I need help right now",
+    "I have chest pain or discomfort",
+    "I have a question about my medicines",
+    "I feel worse than yesterday",
+  ];
+
+  const handleSelectQuickOption = (option) => {
+    if (selectedQuickOption === option) {
+      setSelectedQuickOption("");
+      setHelpMessage("");
+    } else {
+      setSelectedQuickOption(option);
+      setHelpMessage(option);
+    }
+  };
+
+  const handleSendHelpMessage = async () => {
+    const finalMessage = helpMessage.trim();
+    if (!finalMessage || sendingHelpMessage) return;
+
+    setSendingHelpMessage(true);
+    try {
+      await api.post("/messages", {
+        patientId: patientProfile?._id || user?.id,
+        message: finalMessage,
+        type: "urgent",
+      });
+      setHelpSuccess(true);
+      setHelpMessageSent(true);
+      setTimeout(() => {
+        setHelpModalOpen(false);
+        setHelpSuccess(false);
+        setHelpMessage("");
+        setSelectedQuickOption("");
+      }, 3000);
+    } catch (err) {
+      console.error("Failed to send urgent message:", err);
+    } finally {
+      setSendingHelpMessage(false);
+    }
+  };
+
+  const handleCloseHelpModal = () => {
+    if (sendingHelpMessage) return;
+    setHelpModalOpen(false);
+    setHelpSuccess(false);
+    setHelpMessage("");
+    setSelectedQuickOption("");
+  };
 
   useEffect(() => {
     api
@@ -126,7 +185,7 @@ const PatientHome = () => {
   const medicinesTakenToday = latestCheckInIsToday && latestCheckIn.medicationStatus === "Taken as planned";
   const medicinesTakenCount = medicinesTakenToday ? medicines.length : 0;
   const latestCheckInDay = latestCheckIn?.date && patientProfile?.dischargeDate
-    ? Math.max(1, Math.floor((new Date(latestCheckIn.date) - new Date(patientProfile.dischargeDate)) / 86400000) + 1)
+    ? Math.max(1, Math.floor((new Date(latestCheckIn.date) - new Date(patientProfile.dischargeDate)) / 86400000))
     : null;
   const statusDetails = latestCheckIn?.riskStatus === "critical"
     ? { label: "Needs attention", icon: "🔴" }
@@ -316,7 +375,22 @@ const PatientHome = () => {
               className="rounded-2xl px-4 py-4 lg:px-6 lg:py-5"
               style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}
             >
-              <div className="flex items-center justify-between mb-4"><div><p className="text-sm font-bold" style={{ color: "#111111" }}>Recovery signal</p><p className="text-xs" style={{ color: "#6B7280" }}>Your recent check-in pattern</p></div><span className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1" style={{ background: "#E7F0E5", color: "#386641" }}>● Monitoring</span></div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#111111" }}>Recovery signal</p>
+                  <p className="text-xs" style={{ color: "#6B7280" }}>Your recent check-in pattern</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigate("/patient/timeline")}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition hover:opacity-80"
+                    style={{ background: "#CAD2C5", color: "#2F3E46" }}
+                  >
+                    View timeline →
+                  </button>
+                  <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1" style={{ background: "#E7F0E5", color: "#386641" }}>● Monitoring</span>
+                </div>
+              </div>
               {loadingSignal ? <p className="text-xs" style={{ color: "#6B7280" }}>Loading...</p> : <div>
                 <div className="mb-4 min-h-[62px] rounded-xl px-4 py-3" style={{ background: "#F5F0EB", border: "1px solid #E4E4E7" }}>
                   {selectedSignal ? <><div className="flex items-center justify-between gap-3"><p className="text-xs font-bold" style={{ color: "#1f6b62" }}>{selectedSignal.label} update</p><span className="text-xs font-bold" style={{ color: "#386641" }}>{selectedSignal.value}% signal</span></div><p className="mt-1 text-xs" style={{ color: "#2F3E46" }}>{selectedSignal.update}</p><p className="mt-1 text-xs font-semibold" style={{ color: "#6B7280" }}>Better: {selectedSignal.improved}</p></> : <p className="text-xs leading-5" style={{ color: "#6B7280" }}>Click a day to see what changed and what got better.</p>}
@@ -390,25 +464,173 @@ const PatientHome = () => {
             </div>
 
             <div
-              className="rounded-2xl p-5"
+              className="rounded-2xl p-5 transition-all"
               style={{ background: "#1f6b62" }}
             >
               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "#f5c49d" }}>
                 Need help now?
               </p>
-              <p className="text-sm mb-4" style={{ color: "#d7ebe3" }}>
-                Your care team is only a message away, day or night.
-              </p>
-              <button
-                className="text-xs font-bold px-3 py-2 rounded-lg cursor-pointer"
-                style={{ background: "#FFFFFF", color: "#1f6b62" }}
-              >
-                Message care team →
-              </button>
+              {helpMessageSent ? (
+                <div
+                  className="rounded-xl p-3 text-xs font-bold text-[#E7F0E5] flex items-center gap-2"
+                  style={{ background: "rgba(255, 255, 255, 0.15)" }}
+                >
+                  <span>Message sent · Care team notified ✅</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm mb-4" style={{ color: "#d7ebe3" }}>
+                    Your care team is only a message away, day or night.
+                  </p>
+                  <button
+                    onClick={() => setHelpModalOpen(true)}
+                    className="text-xs font-bold px-3 py-2 rounded-lg cursor-pointer transition hover:opacity-90 active:scale-95"
+                    style={{ background: "#FFFFFF", color: "#1f6b62" }}
+                  >
+                    Message care team →
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Quick Emergency Message Modal */}
+      {helpModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
+          onClick={handleCloseHelpModal}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl relative transition-all"
+            style={{ background: "#FFFFFF", border: "1px solid #E4E4E7" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {helpSuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div
+                  className="mx-auto grid h-16 w-16 place-items-center rounded-full text-3xl"
+                  style={{ background: "#E7F0E5", color: "#386641" }}
+                >
+                  ✓
+                </div>
+                <h3 className="text-xl font-extrabold text-[#111111]">
+                  ✅ Message sent. Your care team has been notified.
+                </h3>
+                <p className="text-xs text-[#6B7280]">
+                  Closing in a moment…
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-extrabold" style={{ color: "#111111" }}>
+                      Contact care team
+                    </h3>
+                    <p className="mt-1 text-xs" style={{ color: "#6B7280" }}>
+                      Your message will be sent immediately
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCloseHelpModal}
+                    className="text-gray-400 hover:text-gray-600 text-lg font-bold p-1 leading-none cursor-pointer"
+                    aria-label="Close modal"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: "#6B7280" }}>
+                    Quick options
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {quickOptions.map((opt) => {
+                      const isSelected = selectedQuickOption === opt;
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => handleSelectQuickOption(opt)}
+                          className="rounded-xl px-3.5 py-2.5 text-xs font-bold text-left transition cursor-pointer"
+                          style={{
+                            background: isSelected ? "#E7F0E5" : "#F5F0EB",
+                            color: isSelected ? "#1f6b62" : "#2F3E46",
+                            border: isSelected ? "1.5px solid #1f6b62" : "1px solid transparent",
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <textarea
+                    rows={3}
+                    maxLength={300}
+                    value={helpMessage}
+                    onChange={(e) => {
+                      setHelpMessage(e.target.value);
+                      if (selectedQuickOption && e.target.value !== selectedQuickOption) {
+                        setSelectedQuickOption("");
+                      }
+                    }}
+                    placeholder="Or describe your situation..."
+                    className="w-full rounded-xl p-3 text-sm focus:outline-none resize-none"
+                    style={{
+                      background: "#F9FAFB",
+                      border: "1px solid #E4E4E7",
+                      color: "#111111",
+                    }}
+                  />
+                  <div className="mt-1 flex justify-end">
+                    <span className="text-[11px]" style={{ color: "#6B7280" }}>
+                      {300 - helpMessage.length} characters remaining
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseHelpModal}
+                    disabled={sendingHelpMessage}
+                    className="w-full sm:w-auto rounded-xl px-5 py-2.5 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                    style={{
+                      background: "#FFFFFF",
+                      border: "1px solid #E4E4E7",
+                      color: "#2F3E46",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendHelpMessage}
+                    disabled={!helpMessage.trim() || sendingHelpMessage}
+                    className="w-full sm:w-auto rounded-xl px-5 py-2.5 text-xs font-bold text-white transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                    style={{ background: "#1f6b62" }}
+                  >
+                    {sendingHelpMessage ? (
+                      <>
+                        <span className="inline-block animate-spin">⏳</span>
+                        <span>Sending…</span>
+                      </>
+                    ) : (
+                      "Send to care team"
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom nav -- mobile/tablet only */}
       <div
